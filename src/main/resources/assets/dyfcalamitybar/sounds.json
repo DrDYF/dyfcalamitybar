@@ -1,0 +1,56 @@
+{
+	"ragefull": {
+		"subtitle": "subtitles.dyfcalamitybar.ragefull",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:ragefull",
+				"stream": false
+			}
+		]
+	},
+	"rageend": {
+		"subtitle": "subtitles.dyfcalamitybar.rageend",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:rageend",
+				"stream": false
+			}
+		]
+	},
+	"rageactive": {
+		"subtitle": "subtitles.dyfcalamitybar.rageactive",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:rageactive",
+				"stream": false
+			}
+		]
+	},
+	"adrenalinefull": {
+		"subtitle": "subtitles.dyfcalamitybar.adrenalinefull",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:adrenalinefull",
+				"stream": false
+			}
+		]
+	},
+	"adrenalineactivate": {
+		"subtitle": "subtitles.dyfcalamitybar.adrenalineactivate",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:adrenalineactivate",
+				"stream": false
+			}
+		]
+	},
+	"adrenalineloss": {
+		"subtitle": "subtitles.dyfcalamitybar.adrenalineloss",
+		"sounds": [
+			{
+				"name": "dyfcalamitybar:adrenalineloss",
+				"stream": false
+			}
+		]
+	}
+}
