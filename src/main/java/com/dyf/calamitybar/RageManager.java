@@ -6,7 +6,6 @@ import com.dyf.calamitybar.network.ModNetworking.RageSyncPayload;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,14 +38,14 @@ public final class RageManager {
 
     public static void onPlayerJoin(ServerPlayer player) {
         STATES.put(player.getUUID(), new RageState());
-        ServerPlayNetworking.send(player, new RageSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new RageSyncPayload(0.0f));
     }
 
     public static void onPlayerDisconnect(ServerPlayer player) {
         STATES.remove(player.getUUID());
     }
 
-    /** Called from the damage mixin whenever a player deals damage to a mob. */
+    /** Called from the damage events whenever a player deals damage to a mob. */
     public static void onPlayerDealtDamage(Player player) {
         MinecraftServer server = player.getServer();
         if (server == null) {
@@ -79,8 +78,8 @@ public final class RageManager {
 
         spawnActivationParticles(player);
 
-        ServerPlayNetworking.send(player, new RageEventPayload(ModNetworking.EVENT_ACTIVATE));
-        ServerPlayNetworking.send(player, new RageSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new RageEventPayload(ModNetworking.EVENT_ACTIVATE));
+        ModNetworking.sendToPlayer(player, new RageSyncPayload(0.0f));
     }
 
     /** Emits a radial burst of redstone-dust particles from the player on activation. */
@@ -119,7 +118,7 @@ public final class RageManager {
                     state.rage = RageConfig.MAX_RAGE;
                     if (!state.wasFull) {
                         state.wasFull = true;
-                        ServerPlayNetworking.send(player, new RageEventPayload(ModNetworking.EVENT_FULL));
+                        ModNetworking.sendToPlayer(player, new RageEventPayload(ModNetworking.EVENT_FULL));
                     }
                 }
             } else if (now - state.lastCombatTick > RageConfig.outOfCombatDelayTicks) {
@@ -136,13 +135,13 @@ public final class RageManager {
 
         // Detect the moment the Rage Mode effect expires (or is removed) to play the end sound.
         if (state.wasRaging && !raging) {
-            ServerPlayNetworking.send(player, new RageEventPayload(ModNetworking.EVENT_END));
+            ModNetworking.sendToPlayer(player, new RageEventPayload(ModNetworking.EVENT_END));
         }
         state.wasRaging = raging;
 
         if (Math.abs(state.rage - state.lastSyncedRage) > 0.01f) {
             state.lastSyncedRage = state.rage;
-            ServerPlayNetworking.send(player, new RageSyncPayload(state.rage));
+            ModNetworking.sendToPlayer(player, new RageSyncPayload(state.rage));
         }
     }
 
@@ -151,7 +150,7 @@ public final class RageManager {
         state.wasFull = false;
         state.wasRaging = false;
         state.lastSyncedRage = 0.0f;
-        ServerPlayNetworking.send(player, new RageSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new RageSyncPayload(0.0f));
     }
 
     private static NearestEnemy findNearestEnemy(ServerPlayer player) {

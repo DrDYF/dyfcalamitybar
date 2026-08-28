@@ -67,13 +67,13 @@ public final class RageHud {
         Minecraft minecraft = Minecraft.getInstance();
         switch (event) {
             case ModNetworking.EVENT_FULL ->
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_FULL, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_FULL.get(), 1.0f));
             case ModNetworking.EVENT_ACTIVATE -> {
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_ACTIVE, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_ACTIVE.get(), 1.0f));
                 startShake(minecraft);
             }
             case ModNetworking.EVENT_END ->
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_END, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.RAGE_END.get(), 1.0f));
             default -> {
             }
         }

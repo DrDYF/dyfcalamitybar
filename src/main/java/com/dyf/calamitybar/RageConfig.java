@@ -6,7 +6,7 @@ import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +33,7 @@ public final class RageConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger("dyfcalamitybar-config");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG_PATH =
-        FabricLoader.getInstance().getConfigDir().resolve("dyfcalamitybar.json");
+        FMLPaths.CONFIGDIR.get().resolve("dyfcalamitybar.json");
 
     /** Rage meter maximum (0-100). Not configurable; the HUD frames assume this scale. */
     public static final float MAX_RAGE = 100.0f;

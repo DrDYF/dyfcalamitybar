@@ -5,8 +5,8 @@ import net.minecraft.world.effect.MobEffectCategory;
 
 /**
  * The Rage Mode effect. Its damage bonus is applied multiplicatively by
- * {@link com.dyf.calamitybar.mixin.LivingEntityMixin}; the effect itself only
- * acts as a marker and a HUD indicator.
+ * {@link com.dyf.calamitybar.DYFCalamityBar.CommonEvents}; the effect itself
+ * only acts as a marker and a HUD indicator.
  */
 public class RageModeEffect extends MobEffect {
     public RageModeEffect() {

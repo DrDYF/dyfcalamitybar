@@ -5,19 +5,22 @@ import com.dyf.calamitybar.DYFCalamityBar;
 import com.dyf.calamitybar.RageManager;
 import com.dyf.calamitybar.client.AdrenalineHud;
 import com.dyf.calamitybar.client.RageHud;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 /**
- * All network payloads for the rage mechanic. Payload types are registered in
- * {@link #initCommon()} on both the client and server; receivers are then
- * registered separately for each side.
+ * All network payloads for the rage and adrenaline mechanics, using the
+ * vanilla {@link CustomPacketPayload} system that NeoForge 1.21.1 builds on.
+ * The payload records and stream codecs are byte-identical to the Fabric 1.21.1
+ * version; only the registration ({@link RegisterPayloadHandlersEvent}) and the
+ * send helpers ({@link PacketDistributor}) are NeoForge-specific.
  */
 public final class ModNetworking {
     private ModNetworking() {
@@ -111,33 +114,45 @@ public final class ModNetworking {
         }
     }
 
-    /** Registers payload codecs. Called from the common initializer on both sides. */
-    public static void initCommon() {
-        PayloadTypeRegistry.playS2C().register(RageSyncPayload.TYPE, RageSyncPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(RageEventPayload.TYPE, RageEventPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(ActivateRagePayload.TYPE, ActivateRagePayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdrenalineSyncPayload.TYPE, AdrenalineSyncPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdrenalineEventPayload.TYPE, AdrenalineEventPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(ActivateAdrenalinePayload.TYPE, ActivateAdrenalinePayload.CODEC);
-    }
+    /**
+     * Registers every payload and its receiver. Called from the mod constructor
+     * on the mod event bus ({@link RegisterPayloadHandlersEvent}).
+     */
+    public static void registerPayloads(RegisterPayloadHandlersEvent event) {
+        // Handlers default to HandlerThread.MAIN, so they run on the game thread
+        // and may touch game state directly.
+        final PayloadRegistrar registrar = event.registrar("1");
 
-    /** Registers server-side receivers. Called from the common initializer (logical server). */
-    public static void initServer() {
-        ServerPlayNetworking.registerGlobalReceiver(ActivateRagePayload.TYPE,
-            (payload, context) -> RageManager.activateRage(context.player()));
-        ServerPlayNetworking.registerGlobalReceiver(ActivateAdrenalinePayload.TYPE,
-            (payload, context) -> AdrenalineManager.activateAdrenaline(context.player()));
-    }
-
-    /** Registers client-side receivers. Called from the client initializer. */
-    public static void initClient() {
-        ClientPlayNetworking.registerGlobalReceiver(RageSyncPayload.TYPE,
+        registrar.playToClient(RageSyncPayload.TYPE, RageSyncPayload.CODEC,
             (payload, context) -> RageHud.setRage(payload.rage()));
-        ClientPlayNetworking.registerGlobalReceiver(RageEventPayload.TYPE,
+        registrar.playToClient(RageEventPayload.TYPE, RageEventPayload.CODEC,
             (payload, context) -> RageHud.handleEvent(payload.event()));
-        ClientPlayNetworking.registerGlobalReceiver(AdrenalineSyncPayload.TYPE,
+        registrar.playToServer(ActivateRagePayload.TYPE, ActivateRagePayload.CODEC,
+            (payload, context) -> {
+                if (context.player() instanceof ServerPlayer sender) {
+                    RageManager.activateRage(sender);
+                }
+            });
+
+        registrar.playToClient(AdrenalineSyncPayload.TYPE, AdrenalineSyncPayload.CODEC,
             (payload, context) -> AdrenalineHud.setAdrenaline(payload.adrenaline()));
-        ClientPlayNetworking.registerGlobalReceiver(AdrenalineEventPayload.TYPE,
+        registrar.playToClient(AdrenalineEventPayload.TYPE, AdrenalineEventPayload.CODEC,
             (payload, context) -> AdrenalineHud.handleEvent(payload.event()));
+        registrar.playToServer(ActivateAdrenalinePayload.TYPE, ActivateAdrenalinePayload.CODEC,
+            (payload, context) -> {
+                if (context.player() instanceof ServerPlayer sender) {
+                    AdrenalineManager.activateAdrenaline(sender);
+                }
+            });
+    }
+
+    /** Server -> client payload; safe from any thread (packets are flushed on the main thread). */
+    public static void sendToPlayer(ServerPlayer player, CustomPacketPayload payload) {
+        PacketDistributor.sendToPlayer(player, payload);
+    }
+
+    /** Client -> server payload. */
+    public static void sendToServer(CustomPacketPayload payload) {
+        PacketDistributor.sendToServer(payload);
     }
 }

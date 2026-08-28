@@ -1,37 +1,28 @@
 package com.dyf.calamitybar;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.effect.MobEffect;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
+/**
+ * Rage Mode and Adrenaline Mode mob effects, registered on the NeoForge mod
+ * event bus. Icons are resolved from
+ * {@code assets/dyfcalamitybar/textures/mob_effect/*.png}. The holders are
+ * used directly with the 1.21.1 {@code Holder}-based effect APIs.
+ */
 public final class ModMobEffects {
     private ModMobEffects() {
     }
 
-    /**
-     * The Rage Mode effect. Its icon texture is resolved from
-     * {@code assets/dyfcalamitybar/textures/mob_effect/rage_mode.png} and it
-     * is treated as a beneficial effect (shown in the buff row).
-     */
-    public static final Holder<MobEffect> RAGE_MODE = Registry.registerForHolder(
-        BuiltInRegistries.MOB_EFFECT,
-        ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "rage_mode"),
-        new RageModeEffect()
-    );
+    public static final DeferredRegister<MobEffect> EFFECTS =
+        DeferredRegister.create(Registries.MOB_EFFECT, DYFCalamityBar.MOD_ID);
 
-    /**
-     * The Adrenaline Mode effect. Its icon texture is resolved from
-     * {@code assets/dyfcalamitybar/textures/mob_effect/adrenaline_mode.png}.
-     */
-    public static final Holder<MobEffect> ADRENALINE_MODE = Registry.registerForHolder(
-        BuiltInRegistries.MOB_EFFECT,
-        ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "adrenaline_mode"),
-        new AdrenalineModeEffect()
-    );
+    /** The Rage Mode effect; treated as a beneficial buff (shown in the buff row). */
+    public static final DeferredHolder<MobEffect, MobEffect> RAGE_MODE =
+        EFFECTS.register("rage_mode", RageModeEffect::new);
 
-    /** Referenced from {@link DYFCalamityBar#onInitialize()} to force class init / registration. */
-    public static void init() {
-    }
+    /** The Adrenaline Mode effect; treated as a beneficial buff (shown in the buff row). */
+    public static final DeferredHolder<MobEffect, MobEffect> ADRENALINE_MODE =
+        EFFECTS.register("adrenaline_mode", AdrenalineModeEffect::new);
 }

@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -50,7 +49,7 @@ public final class AdrenalineManager {
 
     public static void onPlayerJoin(ServerPlayer player) {
         STATES.put(player.getUUID(), new AdrenalineState());
-        ServerPlayNetworking.send(player, new AdrenalineSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
     }
 
     public static void onPlayerDisconnect(ServerPlayer player) {
@@ -79,12 +78,12 @@ public final class AdrenalineManager {
 
         spawnActivationParticles(player);
 
-        ServerPlayNetworking.send(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_ACTIVATE));
-        ServerPlayNetworking.send(player, new AdrenalineSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_ACTIVATE));
+        ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
     }
 
     /**
-     * Called from the damage mixin whenever a player (as the victim) is about to
+     * Called from the damage events whenever a player (as the victim) is about to
      * be hurt. When {@link RageConfig#adrenalineClearOnHurt} is enabled, any
      * damage empties the adrenaline bar entirely; if the bar was full, the damage
      * is also halved and the loss sound plays. When disabled, damage leaves the
@@ -108,12 +107,12 @@ public final class AdrenalineManager {
         state.lastSyncedAdrenaline = 0.0f;
 
         if (wasFull) {
-            ServerPlayNetworking.send(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_LOSS));
-            ServerPlayNetworking.send(player, new AdrenalineSyncPayload(0.0f));
+            ModNetworking.sendToPlayer(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_LOSS));
+            ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
             return damage * RageConfig.adrenalineFullDamageMultiplier;
         }
 
-        ServerPlayNetworking.send(player, new AdrenalineSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
         return damage;
     }
 
@@ -135,7 +134,7 @@ public final class AdrenalineManager {
                     state.adrenaline = RageConfig.maxAdrenaline;
                     if (!state.wasFull) {
                         state.wasFull = true;
-                        ServerPlayNetworking.send(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_FULL));
+                        ModNetworking.sendToPlayer(player, new AdrenalineEventPayload(ModNetworking.ADRENALINE_EVENT_FULL));
                     }
                 }
             } else {
@@ -153,7 +152,7 @@ public final class AdrenalineManager {
 
         if (Math.abs(state.adrenaline - state.lastSyncedAdrenaline) > 5.0f) {
             state.lastSyncedAdrenaline = state.adrenaline;
-            ServerPlayNetworking.send(player, new AdrenalineSyncPayload(state.adrenaline));
+            ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(state.adrenaline));
         }
     }
 
@@ -161,7 +160,7 @@ public final class AdrenalineManager {
         state.adrenaline = 0.0f;
         state.wasFull = false;
         state.lastSyncedAdrenaline = 0.0f;
-        ServerPlayNetworking.send(player, new AdrenalineSyncPayload(0.0f));
+        ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
     }
 
     /** True when a boss (Ender Dragon / Wither) is within the configured range of the player. */
