@@ -186,10 +186,8 @@ public final class ConfigScreen extends Screen {
 
     /** A self-labelled toggle, also rendered manually inside the scissor clip region. */
     private Checkbox checkbox(int x, int y, boolean selected) {
-        Checkbox box = Checkbox.builder(Component.translatable(PREFIX + "field.adrenaline_clear_on_hurt"), this.font)
-            .pos(x, y)
-            .selected(selected)
-            .build();
+        Checkbox box = new Checkbox(x, y, 20, 20,
+            Component.translatable(PREFIX + "field.adrenaline_clear_on_hurt"), selected);
         baseYs.put(box, y);
         addWidget(box);
         return box;
@@ -229,8 +227,8 @@ public final class ConfigScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        this.scroll -= verticalAmount * 12.0;
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        this.scroll -= amount * 12.0;
         applyScroll();
         return true;
     }

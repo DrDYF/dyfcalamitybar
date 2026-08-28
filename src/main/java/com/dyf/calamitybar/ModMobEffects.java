@@ -1,37 +1,27 @@
 package com.dyf.calamitybar;
 
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.effect.MobEffect;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
+/**
+ * Rage Mode and Adrenaline Mode mob effects, registered on the Forge registry
+ * bus. Icons are resolved from
+ * {@code assets/dyfcalamitybar/textures/mob_effect/*.png}.
+ */
 public final class ModMobEffects {
     private ModMobEffects() {
     }
 
-    /**
-     * The Rage Mode effect. Its icon texture is resolved from
-     * {@code assets/dyfcalamitybar/textures/mob_effect/rage_mode.png} and it
-     * is treated as a beneficial effect (shown in the buff row).
-     */
-    public static final Holder<MobEffect> RAGE_MODE = Registry.registerForHolder(
-        BuiltInRegistries.MOB_EFFECT,
-        ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "rage_mode"),
-        new RageModeEffect()
-    );
+    public static final DeferredRegister<MobEffect> EFFECTS =
+        DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, DYFCalamityBar.MOD_ID);
 
-    /**
-     * The Adrenaline Mode effect. Its icon texture is resolved from
-     * {@code assets/dyfcalamitybar/textures/mob_effect/adrenaline_mode.png}.
-     */
-    public static final Holder<MobEffect> ADRENALINE_MODE = Registry.registerForHolder(
-        BuiltInRegistries.MOB_EFFECT,
-        ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "adrenaline_mode"),
-        new AdrenalineModeEffect()
-    );
+    /** The Rage Mode effect; treated as a beneficial buff (shown in the buff row). */
+    public static final RegistryObject<MobEffect> RAGE_MODE =
+        EFFECTS.register("rage_mode", RageModeEffect::new);
 
-    /** Referenced from {@link DYFCalamityBar#onInitialize()} to force class init / registration. */
-    public static void init() {
-    }
+    /** The Adrenaline Mode effect; treated as a beneficial buff (shown in the buff row). */
+    public static final RegistryObject<MobEffect> ADRENALINE_MODE =
+        EFFECTS.register("adrenaline_mode", AdrenalineModeEffect::new);
 }

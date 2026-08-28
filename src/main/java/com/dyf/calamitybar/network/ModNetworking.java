@@ -5,19 +5,22 @@ import com.dyf.calamitybar.DYFCalamityBar;
 import com.dyf.calamitybar.RageManager;
 import com.dyf.calamitybar.client.AdrenalineHud;
 import com.dyf.calamitybar.client.RageHud;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import java.util.function.Supplier;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.simple.SimpleChannel;
 
 /**
- * All network payloads for the rage mechanic. Payload types are registered in
- * {@link #initCommon()} on both the client and server; receivers are then
- * registered separately for each side.
+ * All network payloads for the rage/adrenaline mechanics. A single Forge
+ * {@link SimpleChannel} carries every message; the direction of each payload is
+ * decided by how it is sent (client-&gt;server via {@link #sendToServer} or
+ * server-&gt;client via {@link #sendToPlayer}), and handlers self-route on the
+ * {@link NetworkEvent.Context} direction.
  */
 public final class ModNetworking {
     private ModNetworking() {
@@ -33,111 +36,172 @@ public final class ModNetworking {
     public static final byte ADRENALINE_EVENT_ACTIVATE = 1;
     public static final byte ADRENALINE_EVENT_LOSS = 2;
 
-    /** Server -> client: current rage meter value (0-100). */
-    public record RageSyncPayload(float rage) implements CustomPacketPayload {
-        public static final Type<RageSyncPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "rage_sync"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RageSyncPayload> CODEC =
-            StreamCodec.composite(ByteBufCodecs.FLOAT, RageSyncPayload::rage, RageSyncPayload::new);
+    private static final String PROTOCOL_VERSION = "1";
+    private static SimpleChannel channel;
+    private static int nextId = 0;
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+    /** Server -> client: current rage meter value (0-100). */
+    public record RageSyncPayload(float rage) {
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeFloat(rage);
+        }
+
+        public static RageSyncPayload decode(FriendlyByteBuf buf) {
+            return new RageSyncPayload(buf.readFloat());
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_CLIENT) {
+                    RageHud.setRage(rage);
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
     /** Server -> client: one-shot sound cue (full / activate / end). */
-    public record RageEventPayload(byte event) implements CustomPacketPayload {
-        public static final Type<RageEventPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "rage_event"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, RageEventPayload> CODEC =
-            StreamCodec.composite(ByteBufCodecs.BYTE, RageEventPayload::event, RageEventPayload::new);
+    public record RageEventPayload(byte event) {
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeByte(event);
+        }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public static RageEventPayload decode(FriendlyByteBuf buf) {
+            return new RageEventPayload(buf.readByte());
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_CLIENT) {
+                    RageHud.handleEvent(event);
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
     /** Client -> server: request to activate Rage Mode. */
-    public record ActivateRagePayload() implements CustomPacketPayload {
-        public static final Type<ActivateRagePayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "activate_rage"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, ActivateRagePayload> CODEC =
-            StreamCodec.unit(new ActivateRagePayload());
+    public record ActivateRagePayload() {
+        public void encode(FriendlyByteBuf buf) {
+        }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public static ActivateRagePayload decode(FriendlyByteBuf buf) {
+            return new ActivateRagePayload();
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_SERVER) {
+                    ServerPlayer player = ctx.getSender();
+                    if (player != null) {
+                        RageManager.activateRage(player);
+                    }
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
-    /** Server -> client: current adrenaline meter value (0-10000). */
-    public record AdrenalineSyncPayload(float adrenaline) implements CustomPacketPayload {
-        public static final Type<AdrenalineSyncPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "adrenaline_sync"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, AdrenalineSyncPayload> CODEC =
-            StreamCodec.composite(ByteBufCodecs.FLOAT, AdrenalineSyncPayload::adrenaline, AdrenalineSyncPayload::new);
+    /** Server -> client: current adrenaline meter value (0-maxAdrenaline). */
+    public record AdrenalineSyncPayload(float adrenaline) {
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeFloat(adrenaline);
+        }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public static AdrenalineSyncPayload decode(FriendlyByteBuf buf) {
+            return new AdrenalineSyncPayload(buf.readFloat());
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_CLIENT) {
+                    AdrenalineHud.setAdrenaline(adrenaline);
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
     /** Server -> client: one-shot adrenaline sound cue (full / activate / loss). */
-    public record AdrenalineEventPayload(byte event) implements CustomPacketPayload {
-        public static final Type<AdrenalineEventPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "adrenaline_event"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, AdrenalineEventPayload> CODEC =
-            StreamCodec.composite(ByteBufCodecs.BYTE, AdrenalineEventPayload::event, AdrenalineEventPayload::new);
+    public record AdrenalineEventPayload(byte event) {
+        public void encode(FriendlyByteBuf buf) {
+            buf.writeByte(event);
+        }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public static AdrenalineEventPayload decode(FriendlyByteBuf buf) {
+            return new AdrenalineEventPayload(buf.readByte());
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_CLIENT) {
+                    AdrenalineHud.handleEvent(event);
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
     /** Client -> server: request to activate Adrenaline Mode. */
-    public record ActivateAdrenalinePayload() implements CustomPacketPayload {
-        public static final Type<ActivateAdrenalinePayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "activate_adrenaline"));
-        public static final StreamCodec<RegistryFriendlyByteBuf, ActivateAdrenalinePayload> CODEC =
-            StreamCodec.unit(new ActivateAdrenalinePayload());
+    public record ActivateAdrenalinePayload() {
+        public void encode(FriendlyByteBuf buf) {
+        }
 
-        @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return TYPE;
+        public static ActivateAdrenalinePayload decode(FriendlyByteBuf buf) {
+            return new ActivateAdrenalinePayload();
+        }
+
+        public void handle(Supplier<NetworkEvent.Context> ctxSupplier) {
+            NetworkEvent.Context ctx = ctxSupplier.get();
+            ctx.enqueueWork(() -> {
+                if (ctx.getDirection() == NetworkDirection.PLAY_TO_SERVER) {
+                    ServerPlayer player = ctx.getSender();
+                    if (player != null) {
+                        AdrenalineManager.activateAdrenaline(player);
+                    }
+                }
+            });
+            ctx.setPacketHandled(true);
         }
     }
 
-    /** Registers payload codecs. Called from the common initializer on both sides. */
+    /**
+     * Registers the channel and all payload types. Called once from the common
+     * {@code @Mod} constructor, on both physical sides, before any play traffic.
+     */
     public static void initCommon() {
-        PayloadTypeRegistry.playS2C().register(RageSyncPayload.TYPE, RageSyncPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(RageEventPayload.TYPE, RageEventPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(ActivateRagePayload.TYPE, ActivateRagePayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdrenalineSyncPayload.TYPE, AdrenalineSyncPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(AdrenalineEventPayload.TYPE, AdrenalineEventPayload.CODEC);
-        PayloadTypeRegistry.playC2S().register(ActivateAdrenalinePayload.TYPE, ActivateAdrenalinePayload.CODEC);
+        channel = NetworkRegistry.newSimpleChannel(
+            ResourceLocation.fromNamespaceAndPath(DYFCalamityBar.MOD_ID, "main"),
+            () -> PROTOCOL_VERSION,
+            PROTOCOL_VERSION::equals,
+            PROTOCOL_VERSION::equals
+        );
+        channel.registerMessage(nextId++, RageSyncPayload.class,
+            RageSyncPayload::encode, RageSyncPayload::decode, RageSyncPayload::handle);
+        channel.registerMessage(nextId++, RageEventPayload.class,
+            RageEventPayload::encode, RageEventPayload::decode, RageEventPayload::handle);
+        channel.registerMessage(nextId++, ActivateRagePayload.class,
+            ActivateRagePayload::encode, ActivateRagePayload::decode, ActivateRagePayload::handle);
+        channel.registerMessage(nextId++, AdrenalineSyncPayload.class,
+            AdrenalineSyncPayload::encode, AdrenalineSyncPayload::decode, AdrenalineSyncPayload::handle);
+        channel.registerMessage(nextId++, AdrenalineEventPayload.class,
+            AdrenalineEventPayload::encode, AdrenalineEventPayload::decode, AdrenalineEventPayload::handle);
+        channel.registerMessage(nextId++, ActivateAdrenalinePayload.class,
+            ActivateAdrenalinePayload::encode, ActivateAdrenalinePayload::decode, ActivateAdrenalinePayload::handle);
     }
 
-    /** Registers server-side receivers. Called from the common initializer (logical server). */
-    public static void initServer() {
-        ServerPlayNetworking.registerGlobalReceiver(ActivateRagePayload.TYPE,
-            (payload, context) -> RageManager.activateRage(context.player()));
-        ServerPlayNetworking.registerGlobalReceiver(ActivateAdrenalinePayload.TYPE,
-            (payload, context) -> AdrenalineManager.activateAdrenaline(context.player()));
+    /** Sends a server-&gt;client payload to a single player. */
+    public static void sendToPlayer(ServerPlayer player, Object message) {
+        channel.send(PacketDistributor.PLAYER.with(() -> player), message);
     }
 
-    /** Registers client-side receivers. Called from the client initializer. */
-    public static void initClient() {
-        ClientPlayNetworking.registerGlobalReceiver(RageSyncPayload.TYPE,
-            (payload, context) -> RageHud.setRage(payload.rage()));
-        ClientPlayNetworking.registerGlobalReceiver(RageEventPayload.TYPE,
-            (payload, context) -> RageHud.handleEvent(payload.event()));
-        ClientPlayNetworking.registerGlobalReceiver(AdrenalineSyncPayload.TYPE,
-            (payload, context) -> AdrenalineHud.setAdrenaline(payload.adrenaline()));
-        ClientPlayNetworking.registerGlobalReceiver(AdrenalineEventPayload.TYPE,
-            (payload, context) -> AdrenalineHud.handleEvent(payload.event()));
+    /** Sends a client-&gt;server payload from the local client. */
+    public static void sendToServer(Object message) {
+        channel.sendToServer(message);
     }
 }

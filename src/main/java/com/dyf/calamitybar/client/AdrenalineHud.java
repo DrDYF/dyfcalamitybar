@@ -67,15 +67,15 @@ public final class AdrenalineHud {
         Minecraft minecraft = Minecraft.getInstance();
         switch (event) {
             case ModNetworking.ADRENALINE_EVENT_FULL ->
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_FULL, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_FULL.get(), 1.0f));
             case ModNetworking.ADRENALINE_EVENT_ACTIVATE -> {
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_ACTIVE, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_ACTIVE.get(), 1.0f));
                 startShake(minecraft);
                 draining = true;
                 targetAdrenaline = 0.0f;
             }
             case ModNetworking.ADRENALINE_EVENT_LOSS ->
-                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_LOSS, 1.0f));
+                minecraft.getSoundManager().play(SimpleSoundInstance.forUI(ModSounds.ADRENALINE_LOSS.get(), 1.0f));
             default -> {
             }
         }
