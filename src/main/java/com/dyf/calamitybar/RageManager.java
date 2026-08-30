@@ -7,16 +7,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
-import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.common.Tags;
 
 /**
  * Server-authoritative logic for the rage meter. Runs entirely on the server
@@ -27,6 +30,10 @@ public final class RageManager {
     }
 
     private static final Map<UUID, RageState> STATES = new HashMap<>();
+
+    /** Common boss tag used by multi-loader mods that do not register under forge:bosses. */
+    private static final TagKey<EntityType<?>> COMMON_BOSSES =
+        TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("c", "bosses"));
 
     public static void onServerTick(MinecraftServer server) {
         int now = server.getTickCount();
@@ -165,7 +172,7 @@ public final class RageManager {
         for (LivingEntity entity : player.level().getEntities(
             EntityTypeTest.forClass(LivingEntity.class),
             aabb,
-            e -> e instanceof Enemy && e.isAlive() && e != player
+            e -> (e instanceof Enemy || isBoss(e)) && e.isAlive() && e != player
         )) {
             double dSqr = player.distanceToSqr(entity);
             if (isBoss(entity)) {
@@ -196,7 +203,7 @@ public final class RageManager {
     }
 
     private static boolean isBoss(LivingEntity entity) {
-        return entity instanceof EnderDragon || entity instanceof WitherBoss;
+        return entity.getType().is(Tags.EntityTypes.BOSSES) || entity.getType().is(COMMON_BOSSES);
     }
 
     private static double rageFillPerSecond(double blocks, boolean boss) {

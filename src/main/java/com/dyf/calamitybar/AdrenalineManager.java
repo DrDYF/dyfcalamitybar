@@ -10,14 +10,17 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
-import net.minecraft.world.entity.boss.wither.WitherBoss;
-import net.minecraft.world.level.entity.EntityTypeTest;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.Tags;
 import org.joml.Vector3f;
 
 /**
@@ -38,6 +41,10 @@ public final class AdrenalineManager {
 
     /** Cyan-green colour for the activation particles (青绿色). */
     private static final Vector3f ADRENALINE_DUST_COLOR = new Vector3f(0.0f, 0.85f, 0.7f);
+
+    /** Common boss tag used by multi-loader mods that do not register under forge:bosses. */
+    private static final TagKey<EntityType<?>> COMMON_BOSSES =
+        TagKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath("c", "bosses"));
 
     public static void onServerTick(MinecraftServer server) {
         int now = server.getTickCount();
@@ -163,15 +170,16 @@ public final class AdrenalineManager {
         ModNetworking.sendToPlayer(player, new AdrenalineSyncPayload(0.0f));
     }
 
-    /** True when a boss (Ender Dragon / Wither) is within the configured range of the player. */
+    /** True when a living entity tagged as a boss is within the configured range of the player. */
     private static boolean hasBossNearby(ServerPlayer player) {
         double range = RageConfig.adrenalineDetectionRangeBlocks;
         AABB aabb = player.getBoundingBox().inflate(range);
         var level = player.serverLevel();
-        if (!level.getEntities(EntityTypeTest.forClass(EnderDragon.class), aabb, e -> true).isEmpty()) {
-            return true;
-        }
-        return !level.getEntities(EntityTypeTest.forClass(WitherBoss.class), aabb, e -> true).isEmpty();
+        return !level.getEntitiesOfClass(
+            LivingEntity.class,
+            aabb,
+            entity -> entity.getType().is(Tags.EntityTypes.BOSSES) || entity.getType().is(COMMON_BOSSES)
+        ).isEmpty();
     }
 
     /**

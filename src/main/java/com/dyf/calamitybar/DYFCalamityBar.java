@@ -23,8 +23,8 @@ public class DYFCalamityBar {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public DYFCalamityBar() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public DYFCalamityBar(FMLJavaModLoadingContext context) {
+        IEventBus modEventBus = context.getModEventBus();
 
         // Registry contents (mob effects + sound events) via DeferredRegister.
         ModMobEffects.EFFECTS.register(modEventBus);
