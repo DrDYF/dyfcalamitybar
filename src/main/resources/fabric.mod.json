@@ -5,12 +5,8 @@
 	"name": "DYFCalamityBar",
 	"description": "Adds the Terraria Calamity Rage Mode and Adrenaline mechanics: rage fills near enemies (+35% damage when full), adrenaline charges during boss fights while undamaged (halves a full-bar hit and grants +150% damage when activated).",
 	"authors": [
-		"DYF"
+		"Dr_DYF"
 	],
-	"contact": {
-		"homepage": "https://github.com/",
-		"sources": "https://github.com/"
-	},
 	"license": "MIT",
 	"icon": "assets/dyfcalamitybar/icon.png",
 	"environment": "*",

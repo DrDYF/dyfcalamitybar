@@ -7,13 +7,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.fabric.api.tag.convention.v2.ConventionalEntityTypeTags;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
-import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.entity.EntityTypeTest;
@@ -166,7 +165,7 @@ public final class RageManager {
         for (LivingEntity entity : player.level().getEntities(
             EntityTypeTest.forClass(LivingEntity.class),
             aabb,
-            e -> e instanceof Enemy && e.isAlive() && e != player
+            e -> (e instanceof Enemy || isBoss(e)) && e.isAlive() && e != player
         )) {
             double dSqr = player.distanceToSqr(entity);
             if (isBoss(entity)) {
@@ -197,7 +196,7 @@ public final class RageManager {
     }
 
     private static boolean isBoss(LivingEntity entity) {
-        return entity instanceof EnderDragon || entity instanceof WitherBoss;
+        return entity.getType().is(ConventionalEntityTypeTags.BOSSES);
     }
 
     private static double rageFillPerSecond(double blocks, boolean boss) {
